@@ -14,11 +14,12 @@ def k_means_clustering(dataframe, k, max_iterations, epsilon):
     rows, columns = dataframe.shape
     old_sse, new_sse = sys.maxsize, 0
 
-    start = timeit.timeit()
     # generate k initial centroids with each coordinate between the min and max values for a specific column
     # the dataframe
+    dataframe_as_list = list(dataframe)
+    min_max = [(dataframe[column].min(), dataframe[column].max()) for column in dataframe_as_list]
     centroids = {
-        i: [np.random.uniform(dataframe[column].min(), dataframe[column].max()) for column in list(dataframe)]
+        i: [np.random.uniform(min_max[idx][0], min_max[idx][1]) for idx in range(len(dataframe_as_list))]
         for i in range(k)
     }
     original_centroids = copy.deepcopy(centroids)
@@ -28,6 +29,8 @@ def k_means_clustering(dataframe, k, max_iterations, epsilon):
     # create a numpy array from the dataframe
     numpy_arr_of_instances = dataframe.values
 
+    start = timeit.timeit()
+    print("starting time: {}".format(start))
     while(num_iterations < max_iterations):
         clusters = {}
 
@@ -38,8 +41,8 @@ def k_means_clustering(dataframe, k, max_iterations, epsilon):
 
             min_dist = min(distances)
             cluster_num = distances.index(min_dist)
-            print_distance_info(instance, distances)
-            print("Assigning instance to centroid {}".format(cluster_num))
+            # print_distance_info(instance, distances)
+            # print("Assigning instance to centroid {}".format(cluster_num))
 
             if cluster_num not in clusters.keys():
                 clusters[cluster_num] = list()
@@ -66,14 +69,20 @@ def k_means_clustering(dataframe, k, max_iterations, epsilon):
 
         if(math.fabs(old_sse - new_sse) < epsilon):
             end = timeit.timeit()
+            print("ending time: {}".format(end))
+            print("elapsed time: {}".format(end-start))
+
             print(">> K-means clustering converged because difference in SSE between iteration {} and iteration {} was {}".format(num_iterations+1,num_iterations+2,math.fabs(old_sse - new_sse)))
-            return clusters, original_centroids, centroids, num_iterations, (end-start)
+            return clusters, original_centroids, centroids, num_iterations, (-start)
 
         num_iterations += 1
 
     end = timeit.timeit()
+    print("ending time: {}".format(end))
+    print("elapsed time: {}".format(end-start))
+
     print(">> Reached max number of {} iterations before stopping iteration on k means clustering...".format(max_iterations))
-    return clusters, original_centroids, centroids, num_iterations, (end-start)
+    return clusters, original_centroids, centroids, num_iterations, (timeit.timeit()-start)
 
 
 def dist(a, centroids):

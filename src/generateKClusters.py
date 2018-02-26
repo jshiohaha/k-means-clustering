@@ -161,13 +161,16 @@ def print_k_means_data(headers, full_data_averages, rows, clusters, original_cen
 
     print("\nFinal cluster centroids:")
     table_str = "Attribute\tFull Data"
-    for i in range(len(final_centroids)):
+    for i in range(k+1):
         table_str += "\t{}".format(i+1)
     print(table_str)
 
     table_str = "\t\t({})\t".format(rows)
-    for i in range(len(clusters)):
-        table_str += "\t({})".format(len(clusters[i]))
+    for i in range(k+1):
+        if i not in clusters:
+            table_str += "\t({})".format(0)
+        else:
+            table_str += "\t({})".format(len(clusters[i]))
     print(table_str)
 
     print("=========================================================")
@@ -181,8 +184,11 @@ def print_k_means_data(headers, full_data_averages, rows, clusters, original_cen
     print("\nTime taken to build model (full training data) : {} seconds".format(round(runtime, 2)))
     
     print("\nClustered Instances")
-    for k,v in clusters.items():
-        print("{}\t{} ({} %)".format(k+1, len(v), round(((len(v)/rows)*100), 2)))
+    for i in range(k+1):
+        if i not in clusters:
+            print("{}\t{} ({} %)".format(i+1, 0, 0))
+        else:
+            print("{}\t{} ({} %)".format(i+1, len(clusters[i]), round(((len(clusters[i])/rows)*100), 2)))
 
 
 def plot_results(clusters, features=['sepallength', 'sepalwidth', 'petallength']):
