@@ -2,7 +2,7 @@
 
 `TODO:` Insert brief background of k-means and the algorithm. (what is it used for, etc.)
 
-K-means clustering implementation. Acceptable file format is `.arff` file in order to directly compare results with Weka.
+K-means clustering implementation. Acceptable file format is `.arff` file in order to directly compare results with Weka. The majority of testing was done on the `iris.arff` dataset. Testing on this dataset had a few advantages. Namely, there are only `4` attributes for each instance of data (transaction). This means that the algorithm was only ever dealing with 4-dimensions. This made it much easier to comprehend what was going on. Further, the dataset is easily separable on any `3-axis` combination of the `4` explanatory variables, which means that we could easily plot the visual plot to make sure that clusters were converging to where we would expect.
 
 #### TODO's
 

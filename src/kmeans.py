@@ -1,26 +1,29 @@
 import sys
 import copy
 import math
+import timeit
 
 import pprint as pprint
 import numpy as np
 
 from scipy.spatial import distance
 
+
 def k_means_clustering(dataframe, k, max_iterations, epsilon):
     num_iterations = 0
     rows, columns = dataframe.shape
     old_sse, new_sse = sys.maxsize, 0
 
+    start = timeit.timeit()
     # generate k initial centroids with each coordinate between the min and max values for a specific column
     # the dataframe
     centroids = {
         i: [np.random.uniform(dataframe[column].min(), dataframe[column].max()) for column in list(dataframe)]
         for i in range(k)
     }
+    original_centroids = copy.deepcopy(centroids)
 
-    print(">> Created {} centroids. Centroid coordinates are as follows...".format(k))
-    pprint.pprint(centroids)
+    print(">> Created {} random centroids.".format(k))
 
     # create a numpy array from the dataframe
     numpy_arr_of_instances = dataframe.values
@@ -62,13 +65,15 @@ def k_means_clustering(dataframe, k, max_iterations, epsilon):
         print("Sum squared errors on {}-th iteration: {}".format(num_iterations+1, new_sse))
 
         if(math.fabs(old_sse - new_sse) < epsilon):
+            end = timeit.timeit()
             print(">> K-means clustering converged because difference in SSE between iteration {} and iteration {} was {}".format(num_iterations+1,num_iterations+2,math.fabs(old_sse - new_sse)))
-            return clusters, centroids
+            return clusters, original_centroids, centroids, num_iterations, (end-start)
 
         num_iterations += 1
 
+    end = timeit.timeit()
     print(">> Reached max number of {} iterations before stopping iteration on k means clustering...".format(max_iterations))
-    return clusters, centroids
+    return clusters, original_centroids, centroids, num_iterations, (end-start)
 
 
 def dist(a, centroids):
