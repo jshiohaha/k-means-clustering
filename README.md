@@ -27,11 +27,15 @@ There are `4` main inputs for the program, which are entered via CLI arguments:
 
 #### Output
 
-TODO
+TODO --> plots or data on the centroids, clusters, etc? probably want to match weka as closely as possible here
 
 #### Program Commands
 
-TODO
+The program can be started by running the following command that correspond to the input parameters listed above:
+
+```python -f <input_file> -k <num_clusters> -e <epsilon> -i <max_iterations>```
+
+If your default version of Python is `Python 2.x`, you will need to specify `python3` on the command line. Otherwise, running `python` will default to `Python 3.x`.
 
 ### Implementation Assumptions
 
