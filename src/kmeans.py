@@ -1,12 +1,14 @@
 import sys
 import copy
 import math
-import timeit
+import time
+import collections
 
 import pprint as pprint
 import numpy as np
 
 from scipy.spatial import distance
+from scipy.spatial.distance import cdist
 
 
 def k_means_clustering(dataframe, k, max_iterations, epsilon):
@@ -18,71 +20,71 @@ def k_means_clustering(dataframe, k, max_iterations, epsilon):
     # the dataframe
     dataframe_as_list = list(dataframe)
     min_max = [(dataframe[column].min(), dataframe[column].max()) for column in dataframe_as_list]
+
     centroids = {
         i: [np.random.uniform(min_max[idx][0], min_max[idx][1]) for idx in range(len(dataframe_as_list))]
         for i in range(k)
     }
+
     original_centroids = copy.deepcopy(centroids)
 
-    print(">> Created {} random centroids.".format(k))
+    # print(">> Created {} random centroids.".format(k))
 
     # create a numpy array from the dataframe
     numpy_arr_of_instances = dataframe.values
 
-    start = timeit.timeit()
-    print("starting time: {}".format(start))
+    start = time.time()
+    # print("starting time: {}".format(start))
     while(num_iterations < max_iterations):
         clusters = {}
 
-        # calculate distance to nearest cluster, and assign
+        # calculate distance to nearest cluster, and assign to tht cluster
+        # Grows linearly with number of instances because we iterate through all
+        # transactions to assign to a cluster
         for instance in numpy_arr_of_instances:
-            # remove the index of each instance
-            distances = dist(instance, centroids)
+            distances, min_dist, cluster_id = dist(instance, centroids)
 
-            min_dist = min(distances)
-            cluster_num = distances.index(min_dist)
-            # print_distance_info(instance, distances)
-            # print("Assigning instance to centroid {}".format(cluster_num))
-
-            if cluster_num not in clusters.keys():
-                clusters[cluster_num] = list()
-            clusters[cluster_num].append(instance)
+            if cluster_id not in clusters.keys():
+                clusters[cluster_id] = list()
+            clusters[cluster_id].append(instance)
 
         # find new cluster centers by taking the average of all assigned points
+        # todo... improve performance here
         for k,list_of_instances in clusters.items():
             centroid_sum = np.zeros(columns)
             centroid_size = len(list_of_instances)
+
             for instance in list_of_instances:
-                for i in range(len(instance)):
-                    centroid_sum[i] += instance[i]
+                centroid_sum = np.add(centroid_sum, instance)
             # assigning average of the i-th attribute to the i-th attribute of the k-th centroid
+
             centroids[k] = [(centroid_sum[i] / centroid_size) for i in range(len(centroid_sum))]
+
+        # print("new centroids...")
+        # pprint.pprint(centroids)
 
         old_sse = new_sse
         new_sse = 0
         # Calculate the sum squared error on the current iteration
         for k,list_of_instances in clusters.items():
+            # print("For cluster {}, we have {} instances.".format(k, len(list_of_instances)))
             for instance in list_of_instances:
-                new_sse += distance.euclidean(centroids[k], instance)
+                new_sse += np.linalg.norm(np.subtract(centroids[k], instance))
 
-        print("Sum squared errors on {}-th iteration: {}".format(num_iterations+1, new_sse))
+        # print("Sum squared errors on {}-th iteration: {}".format(num_iterations+1, new_sse))
 
         if(math.fabs(old_sse - new_sse) < epsilon):
-            end = timeit.timeit()
-            print("ending time: {}".format(end))
-            print("elapsed time: {}".format(end-start))
-
-            print(">> K-means clustering converged because difference in SSE between iteration {} and iteration {} was {}".format(num_iterations+1,num_iterations+2,math.fabs(old_sse - new_sse)))
-            return clusters, original_centroids, centroids, num_iterations, (-start)
+            # print(">> K-means clustering converged because difference in SSE between iteration {} and iteration {} was {}".format(num_iterations+1,num_iterations+2,math.fabs(old_sse - new_sse)))
+            end = time.time()
+            # print(">> Ending k-means at {}. Elapsed time was {}.".format(end, end-start))
+            return clusters, original_centroids, centroids, num_iterations, (end-start), new_sse
 
         num_iterations += 1
 
-    end = timeit.timeit()
-    print("ending time: {}".format(end))
-    print("elapsed time: {}".format(end-start))
-
-    print(">> Reached max number of {} iterations before stopping iteration on k means clustering...".format(max_iterations))
-    return clusters, original_centroids, centroids, num_iterations, (timeit.timeit()-start)
+    # print(">> Reached max number of {} iterations before stopping iteration on k means clustering...".format(max_iterations))
+    end = time.time()
+    # print(">> Ending k-means at {}. Elapsed time was {}.".format(end, end-start))
+    return clusters, original_centroids, centroids, num_iterations, (end-start), new_sse
 
 
 def dist(a, centroids):
@@ -91,9 +93,20 @@ def dist(a, centroids):
         todo: validate this returns the correct minimum distance
     '''
     distances = []
+    min_dist = sys.maxsize
+    min_dist_key = 0
+    a = np.array(a).reshape(1,-1)
+
     for k,v in centroids.items():
-        distances.append(distance.euclidean(a, v))
-    return distances
+        v = np.array(v).reshape(1,-1)
+        d = cdist(a, v, 'euclidean')
+
+        if d < min_dist:
+            min_dist = d
+            min_dist_key = k
+        distances.append(d)
+
+    return distances, min_dist, min_dist_key
 
 
 def print_distance_info(instance, distances):

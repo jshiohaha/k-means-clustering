@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from arff2pandas import a2p
 from mpl_toolkits.mplot3d import Axes3D
 from pathlib import Path
+from sklearn import preprocessing
 
 '''
     TODO: 
@@ -25,6 +26,7 @@ from pathlib import Path
       and determine the optimal number of clusters. In the report, you should
       write a paragraph to summarize the observation and elaborate on it. 
       (15 points)
+        - plotting sse
 
     • Compare the performance of your algorithm with that of Weka and summarize
       your results. In the report, summarize the differences (if there is any) and
@@ -32,33 +34,9 @@ from pathlib import Path
 
     • Write report
 
-
-
-    Current output -- mostly matches weka: 
-
-        Number of iterations: 3
-        Within cluster sum of squared errors: 1
-
-        Initial starting points (random):
-        Cluster 1: 7.32,2.99,3.78,1.35
-        Cluster 2: 5.78,2.01,4.41,2.08
-        Cluster 3: 5.81,3.44,1.62,0.99
-
-        Final cluster centroids:
-        Attribute   Full Data   1   2   3
-                (150)       (39)    (61)    (50)
-        =========================================================
-        sepallength 5.84        6.85    5.88    5.01
-        sepalwidth  3.05        3.08    2.74    3.42
-        petallength 3.76        5.72    4.39    1.46
-        petalwidth  1.2     2.05    1.43    0.24
-
-        Time taken to build model (full training data) : 0.0 seconds
-
-        Clustered Instances
-        1   39 (26.0 %)
-        2   61 (40.67 %)
-        3   50 (33.33 %)
+    TODO: - email TA about error output...
+          - ask TA if the runtime plots can be separate.. (and what should
+            value of k be when testing different dimensions?)
 '''
 
 
@@ -130,8 +108,7 @@ def main():
                 print("Incorrect paramter specification. Exiting...")
                 sys.exit()
 
-    dataframe = parse_arff_file(filename)
-
+    dataframe, classes = parse_arff_file(filename)
     headers = list()
     full_data_averages = list()
     for col in list(dataframe):
@@ -140,17 +117,60 @@ def main():
 
     rows, columns = dataframe.shape
 
-    clusters, original_centroids, final_centroids, num_iterations, runtime = kmeans.k_means_clustering(dataframe, k, max_iterations, epsilon)
+    clusters, original_centroids, final_centroids, num_iterations, runtime, error = kmeans.k_means_clustering(dataframe, k, max_iterations, epsilon)
+    # plot_goodness_versus_clusters(dataframe)
 
-    print_k_means_data(headers, full_data_averages, rows, clusters, original_centroids, final_centroids, num_iterations, runtime)
-
+    print_k_means_data(headers, full_data_averages, rows, clusters, original_centroids, final_centroids, num_iterations, runtime, error, classes)
     # plot_results(clusters)
 
 
-def print_k_means_data(headers, full_data_averages, rows, clusters, original_centroids, final_centroids, num_iterations, runtime):
+def plot_runtime_versus_clusters(dataframe):
+    k = 1
+    max_iterations = 100
+    epsilon = 0.01
+    max_k = 50
+
+    runtime_arr = []
+    while k <= max_k:
+        print("Starting iteration for {} clusters.".format(k))
+        clusters, original_centroids, final_centroids, num_iterations, runtime, error = kmeans.k_means_clustering(dataframe, k, max_iterations, epsilon)
+        runtime_arr.append(runtime)
+        k += 1
+
+    x_axis = np.arange(1, max_k+1, 1)
+    fig, ax = plt.subplots()
+    ax.set_title("Runtime versus Number of Clusters")
+    ax.set_xlabel("Number of Clusters")
+    ax.set_ylabel("Runtime (in seconds)")
+    ax.plot(x_axis, runtime_arr, color='r')
+    plt.show()
+
+
+def plot_goodness_versus_clusters(dataframe):
+    k = 1
+    max_iterations = 100
+    epsilon = 0.01
+    max_k = 50
+
+    goodness = []
+    while k <= max_k:
+        print("Starting iteration for {} clusters.".format(k))
+        clusters, original_centroids, final_centroids, num_iterations, runtime, error = kmeans.k_means_clustering(dataframe, k, max_iterations, epsilon)
+        goodness.append(error)
+        k += 1
+
+    x_axis = np.arange(1, max_k+1, 1)
+    fig, ax = plt.subplots()
+    ax.set_title("Goodness versus Number of Clusters")
+    ax.set_xlabel("Number of Clusters")
+    ax.set_ylabel("SSE (Goodness)")
+    ax.plot(x_axis, goodness, color='r')
+    plt.show()
+
+
+def print_k_means_data(headers, full_data_averages, rows, clusters, original_centroids, final_centroids, num_iterations, runtime, error, classes):
     print("\nNumber of iterations: {}".format(num_iterations))
-    # TODO: what is the equivalent of this from Weka?
-    print("Within cluster sum of squared errors: {}".format(1))
+    print("Within cluster sum of squared errors: {}".format(round(error, 3)))
     print("\nInitial starting points (random):")
 
     for k,v in original_centroids.items():
@@ -176,9 +196,16 @@ def print_k_means_data(headers, full_data_averages, rows, clusters, original_cen
     print("=========================================================")
 
     for i in range(len(headers)):
-        row_str = headers[i].split("@")[0] + "\t" + str(round(full_data_averages[i], 2)) + "\t"
-        for j in range(k+1):
-            row_str += "\t" + str(round(final_centroids[j][i], 2))
+        current_attribute = headers[i].split("@")[0]
+
+        if current_attribute.lower() == 'class':
+            row_str = current_attribute + "\t" + str(classes[int(full_data_averages[i])]) + "\t"
+            for j in range(k+1):
+                row_str += "\t" + str(classes[int(final_centroids[j][i])])
+        else:
+            row_str = current_attribute + "\t" + str(round(full_data_averages[i], 2)) + "\t"
+            for j in range(k+1):
+                row_str += "\t" + str(round(final_centroids[j][i], 2))
         print(row_str)
 
     print("\nTime taken to build model (full training data) : {} seconds".format(round(runtime, 2)))
@@ -218,11 +245,20 @@ def plot_results(clusters, features=['sepallength', 'sepalwidth', 'petallength']
 
 def parse_arff_file(filename):
     numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
-
+    classes = []
     with open(filename) as file:
         df = a2p.load(file)
+
+        try:
+            df.iloc[:,-1] = df.iloc[:,-1].apply(int)
+        except:
+            le = preprocessing.LabelEncoder()
+            le.fit(df.iloc[:,-1])
+            classes = list(le.classes_)
+            df.iloc[:,-1] = le.transform(df.iloc[:,-1]) 
+
         new_df = df.select_dtypes(include=numerics)
-        return new_df
+        return new_df, classes
 
 
 if __name__ == '__main__':
