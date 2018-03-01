@@ -5,7 +5,6 @@ import time
 import pprint
 
 import kmeans as kmeans
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -15,100 +14,20 @@ from mpl_toolkits.mplot3d import Axes3D
 from pathlib import Path
 from sklearn import preprocessing
 
+
 '''
     TODO: 
-    • Plot the runtime of the algorithm as a function of number of clusters,
-      number of dimensions and size of the dataset (number of transactions).
-      In the report, you should write a paragraph to summarize the observation
-      and elaborate on it. (10 points)
-
-    • Plot the goodness of clustering as a function of the number of clusters
-      and determine the optimal number of clusters. In the report, you should
-      write a paragraph to summarize the observation and elaborate on it. 
-      (15 points)
-        - plotting sse
-
-    • Compare the performance of your algorithm with that of Weka and summarize
-      your results. In the report, summarize the differences (if there is any) and
-      elaborate on it (why/how). (10 points)
-
-    • Write report
-
-    TODO: - email TA about error output...
-          - ask TA if the runtime plots can be separate.. (and what should
-            value of k be when testing different dimensions?)
+    • Plot the runtime of the algorithm as a function of number of dimensions
+      and size of the dataset (number of transactions). In the report, you
+      should write a paragraph to summarize the observation and elaborate on
+      it. (10 points)
 '''
 
 
 def main():
-    filename = ''
-    k = 0
-    epsilon = 0
-    max_iterations = 0
+    filename, k, epsilon, max_iterations, seed, normalize = parse_command_line_args(sys.argv)
 
-    arg_length = len(sys.argv)
-
-    if arg_length != 9:
-        print("Incorrect number of CLI arguments. Please see README for an example command for how to run this program.")
-        sys.exit()
-    else:
-        if '-f' in sys.argv:
-            idx = sys.argv.index('-f')
-
-            if isinstance(sys.argv[idx+1], str):
-                input_filename = sys.argv[idx+1]
-
-                user_file = Path(input_filename)
-                if not user_file.exists() or not user_file.is_file():
-                    print("Filename: {} does not exist. Exiting...".format(user_file))
-                    sys.exit()
-
-                filename = input_filename
-                print("Using the specified value for input filename: " + str(input_filename))
-            else:
-                print("Incorrect paramter specification. Exiting...")
-                sys.exit()
-
-        if '-k' in sys.argv:
-            idx = sys.argv.index('-k')
-
-            if isinstance(sys.argv[idx+1], str):
-                try:
-                    k = int(sys.argv[idx+1])
-                    print("Using the specified value for k: " + str(k) + ".")
-                except:
-                    print("Could not parse {} into an integer.".format(sys.argv[idx+1]))
-            else:
-                print("Incorrect paramter specification. Exiting...")
-                sys.exit()
-
-        if '-e' in sys.argv:
-            idx = sys.argv.index('-e')
-
-            if isinstance(sys.argv[idx+1], str):
-                try:
-                    epsilon = float(sys.argv[idx+1])
-                    print("Using the specified value for epsilon: " + str(epsilon) + ".")
-                except:
-                    print("Could not parse {} into a float.".format(sys.argv[idx+1]))
-            else:
-                print("Incorrect paramter specification. Exiting...")
-                sys.exit()
-
-        if '-i' in sys.argv:
-            idx = sys.argv.index('-i')
-
-            if isinstance(sys.argv[idx+1], str):
-                try:
-                    max_iterations = int(sys.argv[idx+1])
-                    print("Using the specified value for max iterations: " + str(max_iterations) + ".")
-                except:
-                    print("Could not parse {} into an integer.".format(sys.argv[idx+1]))
-            else:
-                print("Incorrect paramter specification. Exiting...")
-                sys.exit()
-
-    dataframe, classes = parse_arff_file(filename)
+    dataframe, classes = parse_arff_file(filename, normalize)
     headers = list()
     full_data_averages = list()
     for col in list(dataframe):
@@ -116,9 +35,7 @@ def main():
         full_data_averages.append(dataframe[col].mean())
 
     rows, columns = dataframe.shape
-
-    clusters, original_centroids, final_centroids, num_iterations, runtime, error = kmeans.k_means_clustering(dataframe, k, max_iterations, epsilon)
-    # plot_goodness_versus_clusters(dataframe)
+    clusters, original_centroids, final_centroids, num_iterations, runtime, error = kmeans.k_means_clustering(dataframe, k, max_iterations, epsilon, seed)
 
     print_k_means_data(headers, full_data_averages, rows, clusters, original_centroids, final_centroids, num_iterations, runtime, error, classes)
     # plot_results(clusters)
@@ -146,6 +63,35 @@ def plot_runtime_versus_clusters(dataframe):
     plt.show()
 
 
+def plot_runtime_versus_num_transactions():
+    files = ['../Data/shuttle/train-5.arff','../Data/shuttle/train-10.arff',
+             '../Data/shuttle/train-15.arff','../Data/shuttle/train-20.arff',
+             '../Data/shuttle/train-25.arff','../Data/shuttle/train-30.arff','../Data/shuttle/train-35.arff','../Data/shuttle/train-40.arff']
+    values_of_k = 7
+    runtime_arr = []
+    num_transactions = []
+
+    for idx,file in enumerate(files):
+        dataframe, classes = parse_arff_file(file)
+        headers = list()
+        full_data_averages = list()
+        for col in list(dataframe):
+            headers.append(col)
+            full_data_averages.append(dataframe[col].mean())
+
+        rows, columns = dataframe.shape
+        clusters, original_centroids, final_centroids, num_iterations, runtime, error = kmeans.k_means_clustering(dataframe, values_of_k, 5, 0.01)
+        runtime_arr.append(runtime)
+        num_transactions.append(rows)
+
+    fig, ax = plt.subplots()
+    ax.set_title("Runtime versus Number of Instances")
+    ax.set_xlabel("Number of Instances")
+    ax.set_ylabel("Runtime (Max of 5 Iterations)")
+    ax.plot(num_transactions, runtime_arr, color='r')
+    plt.show()
+
+
 def plot_goodness_versus_clusters(dataframe):
     k = 1
     max_iterations = 100
@@ -169,6 +115,8 @@ def plot_goodness_versus_clusters(dataframe):
 
 
 def print_k_means_data(headers, full_data_averages, rows, clusters, original_centroids, final_centroids, num_iterations, runtime, error, classes):
+    print("\nkMeans")
+    print("======")
     print("\nNumber of iterations: {}".format(num_iterations))
     print("Within cluster sum of squared errors: {}".format(round(error, 3)))
     print("\nInitial starting points (random):")
@@ -199,9 +147,18 @@ def print_k_means_data(headers, full_data_averages, rows, clusters, original_cen
         current_attribute = headers[i].split("@")[0]
 
         if current_attribute.lower() == 'class':
-            row_str = current_attribute + "\t" + str(classes[int(full_data_averages[i])]) + "\t"
-            for j in range(k+1):
-                row_str += "\t" + str(classes[int(final_centroids[j][i])])
+            prediction = int(round(full_data_averages[i], 0))
+
+            if classes is not None:
+                row_str = current_attribute + "\t" + str(classes[prediction]) + "\t"
+                for j in range(k+1):
+                    prediction_idx = int(round(final_centroids[j][i], 0))
+                    row_str += "\t" + str(classes[prediction_idx])
+            else:
+                row_str = current_attribute + "\t" + str(prediction) + "\t"
+                for j in range(k+1):
+                    prediction_idx = int(round(final_centroids[j][i], 0))
+                    row_str += "\t" + str(prediction_idx)
         else:
             row_str = current_attribute + "\t" + str(round(full_data_averages[i], 2)) + "\t"
             for j in range(k+1):
@@ -243,7 +200,7 @@ def plot_results(clusters, features=['sepallength', 'sepalwidth', 'petallength']
     plt.show()
 
 
-def parse_arff_file(filename):
+def parse_arff_file(filename, normalize):
     numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
     classes = []
     with open(filename) as file:
@@ -251,15 +208,115 @@ def parse_arff_file(filename):
 
         try:
             df.iloc[:,-1] = df.iloc[:,-1].apply(int)
+            classes = None
         except:
             le = preprocessing.LabelEncoder()
             le.fit(df.iloc[:,-1])
             classes = list(le.classes_)
             df.iloc[:,-1] = le.transform(df.iloc[:,-1]) 
 
-        new_df = df.select_dtypes(include=numerics)
-        return new_df, classes
+        df = df.select_dtypes(include=numerics)
 
+        if normalize:
+            headers = df.columns
+            x = df.values
+            scaler = preprocessing.Normalizer()
+            scaled_df = scaler.fit_transform(df)
+            df = pd.DataFrame(scaled_df)
+            df.columns=headers
+
+        return df, classes
+
+
+def parse_command_line_args(args):
+    filename = ''
+    k = 0
+    epsilon = 0
+    max_iterations = 0
+    seed = 10
+    normalize = False
+
+    if len(args) > 12:
+        print("Incorrect number of CLI arguments. Please see README for an example command for how to run this program.")
+        sys.exit()
+    else:
+        if '-f' in args:
+            idx = args.index('-f')
+
+            if isinstance(args[idx+1], str):
+                input_filename = args[idx+1]
+
+                user_file = Path(input_filename)
+                if not user_file.exists() or not user_file.is_file():
+                    print("Filename: {} does not exist. Exiting...".format(user_file))
+                    sys.exit()
+
+                filename = input_filename
+                print("Using the specified value for input filename: " + str(input_filename))
+            else:
+                print("Incorrect paramter specification. Exiting...")
+                sys.exit()
+
+        if '-k' in args:
+            idx = args.index('-k')
+
+            if isinstance(args[idx+1], str):
+                try:
+                    k = int(args[idx+1])
+                    print("Using the specified value for k: " + str(k) + ".")
+                except:
+                    print("Could not parse {} into an integer.".format(args[idx+1]))
+            else:
+                print("Incorrect paramter specification. Exiting...")
+                sys.exit()
+
+        if '-e' in args:
+            idx = args.index('-e')
+
+            if isinstance(args[idx+1], str):
+                try:
+                    epsilon = float(args[idx+1])
+                    print("Using the specified value for epsilon: " + str(epsilon) + ".")
+                except:
+                    print("Could not parse {} into a float.".format(args[idx+1]))
+            else:
+                print("Incorrect paramter specification. Exiting...")
+                sys.exit()
+
+        if '-i' in args:
+            idx = args.index('-i')
+
+            if isinstance(args[idx+1], str):
+                try:
+                    max_iterations = int(args[idx+1])
+                    print("Using the specified value for max iterations: " + str(max_iterations) + ".")
+                except:
+                    print("Could not parse {} into an integer.".format(args[idx+1]))
+            else:
+                print("Incorrect paramter specification. Exiting...")
+                sys.exit()
+        if '-s' in args:
+            idx = args.index('-s')
+
+            if isinstance(args[idx+1], str):
+                try:
+                    seed = int(args[idx+1])
+                    print("Using the specified value for seed: " + str(seed) + ".")
+                except:
+                    print("Could not parse {} into an integer.".format(args[idx+1]))
+            else:
+                print("Incorrect paramter specification. Exiting...")
+                sys.exit()
+        else:
+            print("Using default value for seed: {}".format(seed))
+
+        if '-n' in args:
+            print("Program will normalize data before running k-means.")
+            normalize = True
+        else:
+            print("Program will not normalize data before running k-means.")
+
+        return filename, k, epsilon, max_iterations, seed, normalize
 
 if __name__ == '__main__':
     main()

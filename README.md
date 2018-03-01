@@ -4,16 +4,6 @@
 
 K-means clustering implementation. Acceptable file format is `.arff` file in order to directly compare results with Weka. The majority of testing was done on the `iris.arff` dataset. Testing on this dataset had a few advantages. Namely, there are only `4` attributes for each instance of data (transaction). This means that the algorithm was only ever dealing with 4-dimensions. This made it much easier to comprehend what was going on. Further, the dataset is easily separable on any `3-axis` combination of the `4` explanatory variables, which means that we could easily plot the visual plot to make sure that clusters were converging to where we would expect.
 
-#### TODO's
-
-Implement the k-means algorithm to perform clustering in a dataset.
-• Your implementation will be tested on cse.unl.edu server using the command youprovided in the README file. **(15 points)**
-• **In the report**, you should write a paragraph about your program design **(15 points)**• Plot the runtime of the algorithm as a function of number of clusters, number ofdimensions and size of the dataset (number of transactions). **In the report**, you should write a paragraph to summarize the observation and elaborate on it. **(10 points)**
-
-• Plot the goodness of clustering as a function of the number of clusters and determine the optimal number of clusters. **In the report**, you should write a paragraph to summarize the observation and elaborate on it. **(15 points)**
-
-• Compare the performance of your algorithm with that of Weka and summarize your results. **In the report**, summarize the differences (if there is any) and elaborate on it (why/how). **(10 points)**
-
 ### Program
 
 #### Input
@@ -24,14 +14,20 @@ There are `4` main inputs for the program, which are entered via CLI arguments:
 - `-k`: represents the number of clusters that the clustering algorithm should try to find
 - `-e`: represents a threshold such that if the change in sum of the distances from cluster centers decreases below this value, the program will terminate
 - `-i`: represents the number of iterations to run before terminating if the other terminating conditions are not met
+- [Optional] `-s`: represents the value of the seed value when using `random()` to force pseudo-random functions to behave deterministically. This helps to ensure repeatability. If not specified, then the k-means clustering algorithm will use a default value of `10`.
+- [Optional] `-n`: represents a boolean flag that tells the program if it should normalize the data set before running the k-means algorithm.
 
 #### Output
 
-TODO --> plots or data on the centroids, clusters, etc? probably want to match weka as closely as possible here
+The program outputs information about the clustering results from k-means. This information includes initial centroid coordinates, runtime, resulting cluster attributes, and total cluster membership.
 
 #### Program Commands
 
 The program can be started by running the following command that correspond to the input parameters listed above:
+
+```python -f <input_file> -k <num_clusters> -e <epsilon> -i <max_iterations> -s 1```
+
+Or, if you don't specify the `-s` CLI argument, which denotes the value of the seed variable, then you would use the following command:
 
 ```python -f <input_file> -k <num_clusters> -e <epsilon> -i <max_iterations>```
 
