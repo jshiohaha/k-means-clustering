@@ -3,6 +3,7 @@ import csv
 import json
 import time
 import pprint
+import copy
 
 import kmeans as kmeans
 import numpy as np
@@ -17,40 +18,38 @@ from sklearn import preprocessing
 
 '''
     TODO: 
-    • Plot the runtime of the algorithm as a function of number of dimensions
-      and size of the dataset (number of transactions). In the report, you
-      should write a paragraph to summarize the observation and elaborate on
-      it. (10 points)
+    • Plot the runtime of the algorithm as a function of number of dimensions.
+    In the report, you should write a paragraph to summarize the observation
+    and elaborate on it. (10 points)
+
+    can we normalize the dataset but preserve the original points by keeping the indices
+    of the values?
 '''
 
 
 def main():
     filename, k, epsilon, max_iterations, seed, normalize = parse_command_line_args(sys.argv)
-
-    dataframe, classes = parse_arff_file(filename, normalize)
-    headers = list()
-    full_data_averages = list()
-    for col in list(dataframe):
-        headers.append(col)
-        full_data_averages.append(dataframe[col].mean())
+    dataframe, classes, original_dataframe = parse_arff_file(filename, normalize)
 
     rows, columns = dataframe.shape
     clusters, original_centroids, final_centroids, num_iterations, runtime, error = kmeans.k_means_clustering(dataframe, k, max_iterations, epsilon, seed)
 
-    print_k_means_data(headers, full_data_averages, rows, clusters, original_centroids, final_centroids, num_iterations, runtime, error, classes)
+    print_k_means_data(original_dataframe, clusters, original_centroids, final_centroids, num_iterations, runtime, error, classes, normalize)
     # plot_results(clusters)
+    # plot_runtime_versus_clusters(dataframe, seed)
+    # plot_runtime_versus_dimensions()
 
 
-def plot_runtime_versus_clusters(dataframe):
+def plot_runtime_versus_clusters(dataframe, seed):
     k = 1
     max_iterations = 100
     epsilon = 0.01
-    max_k = 50
+    max_k = 25
 
     runtime_arr = []
     while k <= max_k:
         print("Starting iteration for {} clusters.".format(k))
-        clusters, original_centroids, final_centroids, num_iterations, runtime, error = kmeans.k_means_clustering(dataframe, k, max_iterations, epsilon)
+        clusters, original_centroids, final_centroids, num_iterations, runtime, error = kmeans.k_means_clustering(dataframe, k, max_iterations, epsilon, seed)
         runtime_arr.append(runtime)
         k += 1
 
@@ -63,6 +62,47 @@ def plot_runtime_versus_clusters(dataframe):
     plt.show()
 
 
+def plot_runtime_versus_dimensions():
+    ''' Used Weka EM Clustering Algorithm to 
+        use cross validation to determine the
+        optimal k for values_of_k corresponding
+        to the value of k to use for each of the
+        datsets.
+    '''
+    files = ['../Data/dimensions/train-5-1000.arff',
+             '../Data/dimensions/train-10-1000.arff',
+             '../Data/dimensions/train-12-1000.arff',
+             '../Data/dimensions/train-40-1000.arff',
+             '../Data/dimensions/train-784-1000.arff',
+             '../Data/dimensions/train-10000-100.arff']
+    max_iterations = 5
+    epsilon = 0.01
+    max_k = 25
+    values_of_k = [12,5,19,7,5,15]
+    runtime_arr = []
+    num_dimensions = []
+
+    for idx,file in enumerate(files):
+        dataframe, classes, original_dataframe = parse_arff_file(file, normalize=True)
+        headers = list()
+        full_data_averages = list()
+        for col in list(dataframe):
+            headers.append(col)
+            full_data_averages.append(dataframe[col].mean())
+
+        rows, columns = dataframe.shape
+        clusters, original_centroids, final_centroids, num_iterations, runtime, error = kmeans.k_means_clustering(dataframe, values_of_k[idx], max_iterations, 0.01, seed=None)
+        runtime_arr.append(runtime)
+        num_dimensions.append(columns)
+
+    fig, ax = plt.subplots()
+    ax.set_title("Runtime versus Number of Dimensions")
+    ax.set_xlabel("Number of Dimensions")
+    ax.set_ylabel("Runtime (Max of 5 Iterations)")
+    ax.plot(num_dimensions, runtime_arr, color='r')
+    plt.show()
+
+
 def plot_runtime_versus_num_transactions():
     files = ['../Data/shuttle/train-5.arff','../Data/shuttle/train-10.arff',
              '../Data/shuttle/train-15.arff','../Data/shuttle/train-20.arff',
@@ -72,7 +112,7 @@ def plot_runtime_versus_num_transactions():
     num_transactions = []
 
     for idx,file in enumerate(files):
-        dataframe, classes = parse_arff_file(file)
+        dataframe, classes, original_dataframe = parse_arff_file(file)
         headers = list()
         full_data_averages = list()
         for col in list(dataframe):
@@ -114,12 +154,19 @@ def plot_goodness_versus_clusters(dataframe):
     plt.show()
 
 
-def print_k_means_data(headers, full_data_averages, rows, clusters, original_centroids, final_centroids, num_iterations, runtime, error, classes):
+def print_k_means_data(original_dataframe, clusters, original_centroids, final_centroids, num_iterations, runtime, error, classes, normalize):
     print("\nkMeans")
     print("======")
     print("\nNumber of iterations: {}".format(num_iterations))
     print("Within cluster sum of squared errors: {}".format(round(error, 3)))
     print("\nInitial starting points (random):")
+
+    rows, columns = original_dataframe.shape
+    headers = list()
+    full_data_averages = list()
+    for col in list(original_dataframe):
+        headers.append(col)
+        full_data_averages.append(original_dataframe[col].mean())
 
     for k,v in original_centroids.items():
         centroid_coordinates = ""
@@ -146,26 +193,26 @@ def print_k_means_data(headers, full_data_averages, rows, clusters, original_cen
     for i in range(len(headers)):
         current_attribute = headers[i].split("@")[0]
 
-        if current_attribute.lower() == 'class':
-            prediction = int(round(full_data_averages[i], 0))
+        # if current_attribute.lower() == 'class':
+        #     prediction = int(round(full_data_averages[i], 0))
 
-            if classes is not None:
-                row_str = current_attribute + "\t" + str(classes[prediction]) + "\t"
-                for j in range(k+1):
-                    prediction_idx = int(round(final_centroids[j][i], 0))
-                    row_str += "\t" + str(classes[prediction_idx])
-            else:
-                row_str = current_attribute + "\t" + str(prediction) + "\t"
-                for j in range(k+1):
-                    prediction_idx = int(round(final_centroids[j][i], 0))
-                    row_str += "\t" + str(prediction_idx)
-        else:
-            row_str = current_attribute + "\t" + str(round(full_data_averages[i], 2)) + "\t"
-            for j in range(k+1):
-                row_str += "\t" + str(round(final_centroids[j][i], 2))
+        #     if classes is not None:
+        #         row_str = current_attribute + "\t" + str(classes[prediction]) + "\t"
+        #         for j in range(k+1):
+        #             prediction_idx = int(round(final_centroids[j][0][i], 0))
+        #             row_str += "\t" + str(classes[prediction_idx])
+        #     else:
+        #         row_str = current_attribute + "\t" + str(prediction) + "\t"
+        #         for j in range(k+1):
+        #             prediction_idx = int(round(final_centroids[j][0][i], 0))
+        #             row_str += "\t" + str(prediction_idx)
+        # else:
+        row_str = current_attribute + "\t" + str(round(full_data_averages[i], 3)) + "\t"
+        for j in range(k+1):
+            row_str += "\t" + str(round(final_centroids[j][0][i], 3))
         print(row_str)
 
-    print("\nTime taken to build model (full training data) : {} seconds".format(round(runtime, 2)))
+    print("\nTime taken to build model (full training data) : {} seconds".format(round(runtime, 5)))
     
     print("\nClustered Instances")
     for i in range(k+1):
@@ -186,9 +233,9 @@ def plot_results(clusters, features=['sepallength', 'sepalwidth', 'petallength']
         x_plt, y_plt, z_plt = [],[],[]
 
         for instance in v:
-            x_plt.append(instance[0])
-            y_plt.append(instance[1])
-            z_plt.append(instance[2])
+            x_plt.append(instance[1][0])
+            y_plt.append(instance[1][1])
+            z_plt.append(instance[1][2])
         print("Added {} instances to cluster {} to print in color {}.".format(len(x_plt),k,colors[k]))
         ax.scatter(x_plt, y_plt, z_plt, color=colors[k])
 
@@ -217,6 +264,7 @@ def parse_arff_file(filename, normalize):
 
         df = df.select_dtypes(include=numerics)
 
+        original_dataframe = copy.deepcopy(df)
         if normalize:
             headers = df.columns
             x = df.values
@@ -225,7 +273,7 @@ def parse_arff_file(filename, normalize):
             df = pd.DataFrame(scaled_df)
             df.columns=headers
 
-        return df, classes
+        return df, classes, original_dataframe
 
 
 def parse_command_line_args(args):
@@ -317,6 +365,7 @@ def parse_command_line_args(args):
             print("Program will not normalize data before running k-means.")
 
         return filename, k, epsilon, max_iterations, seed, normalize
+
 
 if __name__ == '__main__':
     main()

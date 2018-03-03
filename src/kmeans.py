@@ -6,11 +6,13 @@ import random
 import pandas as pd
 import numpy as np
 
+from scipy.cluster.vq import vq
 
 def k_means_clustering(dataframe, k, max_iterations, epsilon, seed):
     num_iterations = 1
     rows, columns = dataframe.shape
     old_sse, new_sse = sys.maxsize, 0
+    df_as_arr = dataframe.reset_index().values
     min_max = [(dataframe[column].min(), dataframe[column].max()) for column in list(dataframe)]
 
     np.random.seed(seed)
@@ -28,30 +30,36 @@ def k_means_clustering(dataframe, k, max_iterations, epsilon, seed):
     while(num_iterations <= max_iterations):
         clusters = {}
 
-        for instance in dataframe.values:
+        for instance in df_as_arr:
+            instance_idx = instance[0]
+            instance = instance[1:]
+
             min_dist, cluster_id = dist(instance, centroids)
+
             if cluster_id not in clusters.keys():
                 clusters[cluster_id] = list()
-            clusters[cluster_id].append(instance)
+            clusters[cluster_id].append([instance_idx, instance])
 
         old_sse = new_sse
         new_sse = 0
+        SSW = 0
         for k,list_of_instances in clusters.items():
             centroid_sum = np.zeros(columns)
             centroid_size = len(list_of_instances)
 
             for instance in list_of_instances:
-                centroid_sum = np.add(centroid_sum, instance)
+                centroid_sum = np.add(centroid_sum, instance[1:])
 
             centroids[k] = [(centroid_sum[i] / centroid_size) for i in range(len(centroid_sum))]
-            new_sse += np.sum([np.linalg.norm(instance-centroids[k]) for instance in list_of_instances])
+            new_sse += np.sum([np.linalg.norm((np.array(instance[1:])-centroids[k]))**2 for instance in list_of_instances])
 
-        print("Sum squared errors on {}-th iteration: {}".format(num_iterations, new_sse))
+        # print("Sum squared errors on {}-th iteration: {}".format(num_iterations, new_sse))
 
         if(math.fabs(old_sse - new_sse) < epsilon):
             end = time.time()
             print(">> K-means clustering converged because difference in SSE between iteration {} and iteration {} was {}".format(num_iterations,num_iterations+1,math.fabs(old_sse - new_sse)))
             print(">> Ending k-means at {}. Elapsed time was {}.".format(end, end-start))
+
             return clusters, original_centroids, centroids, num_iterations, (end-start), new_sse
 
         num_iterations += 1
@@ -67,7 +75,7 @@ def dist(instance, centroids):
     min_dist_key = 0
 
     for k,v in centroids.items():
-        d = np.linalg.norm(np.array(instance).reshape(1,-1)-np.array(v).reshape(1,-1))
+        d = np.linalg.norm(np.array(instance)-np.array(v))
 
         if d < min_dist:
             min_dist = d
