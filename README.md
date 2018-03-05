@@ -39,14 +39,18 @@ Or, if you don't specify the `-s` CLI argument, which denotes the value of the s
 If your default version of Python is `Python 2.x`, you will need to specify `python3` on the command line. Otherwise, running `python` will default to `Python 3.x`.
 
 ### Extra Program Functions
-A number of additional functions were written to assist in the plotting of runtime and goodness of this algorithm's implementation. None are directly called by the current program 
+A number of additional functions were written to assist in the plotting and printing this algorithm's results. However, none are directly called by the current `main()` method in `generateKClusters.py`.
 
 ### Implementation Assumptions
 
 • Assume that all the attributes are continuous variables.
-• Your program must allow the number of clusters (k) to be specified as input.
-• Your program must allow the epsilon (change in the sum of the distances from thecluster centers) to be specified as input.
-• Your program must allow the number of iterations to be specified as input.
+
+• Your program must allow the number of clusters (k) to be specified as input.
+
+• Your program must allow the epsilon (change in the sum of the distances from the
+cluster centers) to be specified as input.
+
+• Your program must allow the number of iterations to be specified as input.
 
 ### Terminating Conditions
 The program will stop if either of the following conditions hold:
