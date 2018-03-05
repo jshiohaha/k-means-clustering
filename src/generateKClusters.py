@@ -16,17 +16,6 @@ from pathlib import Path
 from sklearn import preprocessing
 
 
-'''
-    TODO: 
-    • Plot the runtime of the algorithm as a function of number of dimensions.
-    In the report, you should write a paragraph to summarize the observation
-    and elaborate on it. (10 points)
-
-    can we normalize the dataset but preserve the original points by keeping the indices
-    of the values?
-'''
-
-
 def main():
     filename, k, epsilon, max_iterations, seed, normalize = parse_command_line_args(sys.argv)
     dataframe, classes, original_dataframe = parse_arff_file(filename, normalize)
@@ -35,9 +24,6 @@ def main():
     clusters, original_centroids, final_centroids, num_iterations, runtime, error = kmeans.k_means_clustering(dataframe, k, max_iterations, epsilon, seed)
 
     print_k_means_data(original_dataframe, clusters, original_centroids, final_centroids, num_iterations, runtime, error, classes, normalize)
-    # plot_results(clusters)
-    # plot_runtime_versus_clusters(dataframe, seed)
-    # plot_runtime_versus_dimensions()
 
 
 def plot_runtime_versus_clusters(dataframe, seed):
@@ -154,6 +140,31 @@ def plot_goodness_versus_clusters(dataframe):
     plt.show()
 
 
+def plot_results(clusters, features=['sepallength', 'sepalwidth', 'petallength']):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    species_arr = ['setosa', 'versicolor', 'virginica']
+    colors = ['green', 'red', 'blue']
+
+    for k,v in clusters.items():
+        x_plt, y_plt, z_plt = [],[],[]
+
+        for instance in v:
+            x_plt.append(instance[1][0])
+            y_plt.append(instance[1][1])
+            z_plt.append(instance[1][2])
+        print("Added {} instances to cluster {} to print in color {}.".format(len(x_plt),k,colors[k]))
+        ax.scatter(x_plt, y_plt, z_plt, color=colors[k])
+
+    ax.set_xlabel(features[0])
+    ax.set_ylabel(features[1])
+    ax.set_zlabel(features[2])
+
+    ax.legend()
+    plt.show()
+
+
 def print_k_means_data(original_dataframe, clusters, original_centroids, final_centroids, num_iterations, runtime, error, classes, normalize):
     print("\nkMeans")
     print("======")
@@ -193,23 +204,12 @@ def print_k_means_data(original_dataframe, clusters, original_centroids, final_c
     for i in range(len(headers)):
         current_attribute = headers[i].split("@")[0]
 
-        # if current_attribute.lower() == 'class':
-        #     prediction = int(round(full_data_averages[i], 0))
-
-        #     if classes is not None:
-        #         row_str = current_attribute + "\t" + str(classes[prediction]) + "\t"
-        #         for j in range(k+1):
-        #             prediction_idx = int(round(final_centroids[j][0][i], 0))
-        #             row_str += "\t" + str(classes[prediction_idx])
-        #     else:
-        #         row_str = current_attribute + "\t" + str(prediction) + "\t"
-        #         for j in range(k+1):
-        #             prediction_idx = int(round(final_centroids[j][0][i], 0))
-        #             row_str += "\t" + str(prediction_idx)
-        # else:
         row_str = current_attribute + "\t" + str(round(full_data_averages[i], 3)) + "\t"
         for j in range(k+1):
-            row_str += "\t" + str(round(final_centroids[j][0][i], 3))
+            if len(final_centroids[j]) > 1:
+                row_str += "\t" + str(round(final_centroids[j][i], 3))
+            else:
+                row_str += "\t" + str(round(final_centroids[j][0][i], 3))
         print(row_str)
 
     print("\nTime taken to build model (full training data) : {} seconds".format(round(runtime, 5)))
@@ -221,30 +221,6 @@ def print_k_means_data(original_dataframe, clusters, original_centroids, final_c
         else:
             print("{}\t{} ({} %)".format(i+1, len(clusters[i]), round(((len(clusters[i])/rows)*100), 2)))
 
-
-def plot_results(clusters, features=['sepallength', 'sepalwidth', 'petallength']):
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-    species_arr = ['setosa', 'versicolor', 'virginica']
-    colors = ['green', 'red', 'blue']
-
-    for k,v in clusters.items():
-        x_plt, y_plt, z_plt = [],[],[]
-
-        for instance in v:
-            x_plt.append(instance[1][0])
-            y_plt.append(instance[1][1])
-            z_plt.append(instance[1][2])
-        print("Added {} instances to cluster {} to print in color {}.".format(len(x_plt),k,colors[k]))
-        ax.scatter(x_plt, y_plt, z_plt, color=colors[k])
-
-    ax.set_xlabel(features[0])
-    ax.set_ylabel(features[1])
-    ax.set_zlabel(features[2])
-
-    ax.legend()
-    plt.show()
 
 
 def parse_arff_file(filename, normalize):

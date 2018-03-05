@@ -53,7 +53,7 @@ def k_means_clustering(dataframe, k, max_iterations, epsilon, seed):
             centroids[k] = [(centroid_sum[i] / centroid_size) for i in range(len(centroid_sum))]
             new_sse += np.sum([np.linalg.norm((np.array(instance[1:])-centroids[k]))**2 for instance in list_of_instances])
 
-        # print("Sum squared errors on {}-th iteration: {}".format(num_iterations, new_sse))
+        print("Sum squared errors on {}-th iteration: {}".format(num_iterations, new_sse))
 
         if(math.fabs(old_sse - new_sse) < epsilon):
             end = time.time()
