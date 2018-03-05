@@ -6,7 +6,6 @@ import random
 import pandas as pd
 import numpy as np
 
-from scipy.cluster.vq import vq
 
 def k_means_clustering(dataframe, k, max_iterations, epsilon, seed):
     num_iterations = 1

@@ -11,6 +11,9 @@ K-means clustering implementation. Acceptable file format is `.arff` file in ord
 
 ### Program
 
+#### Dependencies
+Note that a few Python packages used in this implementation prevent the program from being executable on the CSE server. However, we have included a file called `requirements.txt`, which will allow you to batch install all of the required dependencies for this implementation via pip. All you have to do is run the following command, `pip3 install -r requirements.txt`.
+
 #### Input
 
 There are `4` main inputs for the program, which are entered via CLI arguments:
